@@ -1,0 +1,47 @@
+body {
+    padding: 20px;
+}
+.form-container {
+    padding: 20px;
+    background-color: #f8f9fa;
+    border-radius: 10px;
+}
+.form{
+    max-width: 600px;
+    margin: auto;
+}
+
+.current-weather {
+    margin: 20px auto 20px auto;
+    padding: 15px;
+    background-color: #e9ecef;
+    border-radius: 10px;
+    text-align: center; /* Center text horizontally */
+}
+
+.weather-info{
+    margin-top: 20px;
+    text-align: left;
+}
+
+.error-message{
+    color: red;
+    margin-top: 20px;
+    text-align: left;
+}
+.info-result{
+    padding: 15px;
+}
+
+/* .btn-primary {
+    background-color: #007bff;
+    border: none;
+    padding: 10px 20px;
+    cursor: pointer;
+    color: white;
+    margin: auto;
+}
+
+.btn-primary:hover {
+    background-color: #0056b3;
+} */

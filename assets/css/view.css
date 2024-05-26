@@ -27,21 +27,18 @@ body {
 .error-message{
     color: red;
     margin-top: 20px;
-    text-align: left;
+    text-align: center;
 }
 .info-result{
     padding: 15px;
 }
 
-/* .btn-primary {
-    background-color: #007bff;
-    border: none;
-    padding: 10px 20px;
-    cursor: pointer;
-    color: white;
-    margin: auto;
+.carousel-image {
+    max-height: 400px; /* Adjust this value as needed */
+    object-fit: cover;
+    width: 100%;
 }
 
-.btn-primary:hover {
-    background-color: #0056b3;
-} */
+.btn-dark{
+    margin-top: 20px;
+}

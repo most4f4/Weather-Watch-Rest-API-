@@ -8,7 +8,7 @@ window.onload = function() {
 };
 
 let currentPage = 1;
-const recordsPerPage = 3;
+const recordsPerPage = 5;
 let totalPages = 0;
 let currentWeatherData = [];
 const apiKey = "48bd836253a2ae351c8ee9839626dc14";
@@ -34,7 +34,6 @@ function fetchWeatherByCoords(lat, lon) {
     fetch(apiUrl)
         .then(response => response.json())
         .then(data => {
-            console.log(data);
             const cityName = data.name;
             const country = data.sys.country;
             const temperature = data.main.temp;
@@ -61,6 +60,9 @@ function formatTime(unixTimestamp) {
 
 function fetchWeather() {
     currentWeatherData = []; 
+    totalPages = 0;
+    let currentPage = 1;
+
     const userInput = document.getElementById('cityCountry').value.trim().toLowerCase();
     const [city, countryCode] = userInput.split(',').map(s => s.trim());
     const units = document.getElementById('flexRadioDefault1').checked ? 'imperial' : 'metric';
@@ -83,6 +85,7 @@ function fetchWeather() {
     fetch(apiUrl)
         .then(response => response.json())
         .then(data=>{
+            console.log(data);
             if (data.cod !== "200" || data.count === 0) {
                 document.getElementById('weather-info').innerHTML = '';
                 document.getElementById('error-message').innerHTML = '<p>No matching city found. Please check the city name or country code.</p>';

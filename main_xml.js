@@ -1,3 +1,16 @@
+/*********************************************************************************
+ *
+ * WEB422 – Assignment 1
+ * I declare that this assignment is my own work in accordance with Seneca Academic
+ * Policy. No part of this assignment has been copied manually or electronically 
+ * from any other source (including web sites) or distributed to other students.
+ * 
+ * Name: Mostafa Hasanalipourshahrabadi 
+ * Student ID: 154581227 
+ * Date: 2024-05-27
+ * 
+ ********************************************************************************/
+
 document.getElementById('weather-form').addEventListener('submit', function(event) {
     event.preventDefault();
     fetchWeather();
@@ -7,11 +20,12 @@ window.onload = function() {
     getCurrentLocationWeather();
 };
 
+const apiKey = "48bd836253a2ae351c8ee9839626dc14";
+const recordsPerPage = 3;
+
 let currentPage = 1;
-const recordsPerPage = 5;
 let totalPages = 0;
 let currentWeatherData = [];
-const apiKey = "48bd836253a2ae351c8ee9839626dc14";
 
 function getCurrentLocationWeather() {
     if (navigator.geolocation) {
@@ -29,19 +43,28 @@ function getCurrentLocationWeather() {
 }
 
 function fetchWeatherByCoords(lat, lon) {
-    const apiUrl = `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&appid=${apiKey}&units=metric`;
+    const apiUrl = `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&appid=${apiKey}&units=metric&mode=xml`;
 
     fetch(apiUrl)
-        .then(response => response.json())
+        .then(response => response.text())
         .then(data => {
-            const cityName = data.name;
-            const country = data.sys.country;
-            const temperature = data.main.temp;
+            const parser = new DOMParser();
+            const xmlDoc = parser.parseFromString(data, 'text/xml');
+
+            const cityElement = xmlDoc.getElementsByTagName('city')[0];
+            if (!cityElement) {
+                throw new Error('City not found in XML data.');
+            }
+
+            const cityName = cityElement.getAttribute('name');
+            const country = xmlDoc.getElementsByTagName('country')[0].textContent;
+            const temperature = xmlDoc.getElementsByTagName('temperature')[0].getAttribute('value');
             const flagUrl = `http://openweathermap.org/images/flags/${country.toLowerCase()}.png`;
+
             const weatherInfo = `
                 <h4>Current Location Weather</h4>
                 <p><img src="${flagUrl}" alt="Flag of ${country}"> ${cityName} - ${country}</p>
-                <p>Temperature: ${temperature.toFixed(2)} °C</p>
+                <p>Temperature: ${parseFloat(temperature).toFixed(2)} °C</p>
             `;
             document.getElementById('current-location-weather').innerHTML = weatherInfo;
         })
@@ -56,12 +79,12 @@ function formatTime(unixTimestamp) {
     const hours = date.getHours();
     const minutes = ("0" + date.getMinutes()).slice(-2);
     return `${hours}:${minutes}`;
-} 
+}
 
 function fetchWeather() {
-    currentWeatherData = []; 
+    currentWeatherData = [];
     totalPages = 0;
-    let currentPage = 1;
+    currentPage = 1;
 
     const userInput = document.getElementById('cityCountry').value.trim().toLowerCase();
     const [city, countryCode] = userInput.split(',').map(s => s.trim());
@@ -76,17 +99,20 @@ function fetchWeather() {
 
     document.getElementById('error-message').innerHTML = '';
 
-    var apiUrl = `https://api.openweathermap.org/data/2.5/find?q=${city}`
+    let apiUrl = `https://api.openweathermap.org/data/2.5/find?q=${city}`;
     if (countryCode) {
-        apiUrl += `${countryCode}`;
-    } 
-    apiUrl += `&appid=${apiKey}&units=${units}&cnt=50`
-    
+        apiUrl += `,${countryCode}`;
+    }
+    apiUrl += `&appid=${apiKey}&units=${units}&mode=xml&cnt=50`;
+
     fetch(apiUrl)
-        .then(response => response.json())
-        .then(data=>{
-            console.log(data);
-            if (data.cod !== "200" || data.count === 0) {
+        .then(response => response.text())
+        .then(data => {
+            const parser = new DOMParser();
+            const xmlDoc = parser.parseFromString(data, 'text/xml');
+            const locationList = xmlDoc.querySelectorAll('item');
+
+            if (locationList.length === 0) {
                 document.getElementById('weather-info').innerHTML = '';
                 document.getElementById('error-message').innerHTML = '<p>No matching city found. Please check the city name or country code.</p>';
                 return;
@@ -94,35 +120,49 @@ function fetchWeather() {
 
             let citiesProcessed = 0;
 
-            for (let i = 0; i < data.list.length; i++) {
-                const city = data.list[i];
-                const cityName = city.name;
-                const countryCode = city.sys.country;
-    
-                const cityWeatherUrl = `https://api.openweathermap.org/data/2.5/weather?q=${cityName},${countryCode}&appid=${apiKey}&units=${units}`;
-    
+            locationList.forEach(location => {
+                const cityElement = location.querySelector('city');
+                const countryElement = location.querySelector('country');
+                const cityName = cityElement.getAttribute('name');
+                const country = countryElement.textContent;
+
+                const cityWeatherUrl = `https://api.openweathermap.org/data/2.5/weather?q=${cityName},${country}&appid=${apiKey}&units=${units}&mode=xml`;
+
                 fetch(cityWeatherUrl)
-                    .then(response => response.json())
-                    .then(cityData => {
+                    .then(response => response.text())
+                    .then(cityDataXml => {
+                        const cityDataDoc = parser.parseFromString(cityDataXml, 'text/xml');
+                        const weatherElement = cityDataDoc.querySelector('current');
+
+                        const temperature = weatherElement.querySelector('temperature').getAttribute('value');
+                        const maxTemp = weatherElement.querySelector('temperature').getAttribute('max');
+                        const minTemp = weatherElement.querySelector('temperature').getAttribute('min');
+                        const weatherCondition = weatherElement.querySelector('weather').getAttribute('value');
+                        const windSpeed = weatherElement.querySelector('wind speed').getAttribute('value');
+                        const humidity = weatherElement.querySelector('humidity').getAttribute('value');
+                        const pressure = weatherElement.querySelector('pressure').getAttribute('value');
+                        const sunrise = weatherElement.querySelector('city sun').getAttribute('rise');
+                        const sunset = weatherElement.querySelector('city sun').getAttribute('set');
+
                         currentWeatherData.push({
-                            id: cityData.id,
-                            name: cityData.name,
-                            country: cityData.sys.country,
-                            temperature: cityData.main.temp,
-                            maxTemp: cityData.main.temp_max,
-                            minTemp: cityData.main.temp_min,
-                            weatherCondition: cityData.weather[0].description,
-                            windSpeed: cityData.wind.speed,
-                            humidity: cityData.main.humidity,
-                            pressure: cityData.main.pressure,
-                            sunrise: cityData.sys.sunrise,
-                            sunset: cityData.sys.sunset,
+                            id: cityElement.getAttribute('id'),
+                            name: cityName,
+                            country: country,
+                            temperature: parseFloat(temperature),
+                            maxTemp: parseFloat(maxTemp),
+                            minTemp: parseFloat(minTemp),
+                            weatherCondition: weatherCondition,
+                            windSpeed: parseFloat(windSpeed),
+                            humidity: parseFloat(humidity),
+                            pressure: parseFloat(pressure),
+                            sunrise: new Date(sunrise).getTime() / 1000,
+                            sunset: new Date(sunset).getTime() / 1000,
                             unit: temperatureUnit
                         });
-    
+
                         citiesProcessed++;
-    
-                        if (citiesProcessed === data.list.length) {
+
+                        if (citiesProcessed === locationList.length) {
                             totalPages = Math.floor((citiesProcessed / recordsPerPage)+(citiesProcessed % recordsPerPage > 0 ? 1 : 0));
                             displayPage(currentPage);
                         }
@@ -130,8 +170,7 @@ function fetchWeather() {
                     .catch(error => {
                         console.error('Error fetching data for city:', error);
                     });
-            }
-            
+            });
         })
         .catch(error => {
             console.error('Error fetching data:', error);
@@ -140,18 +179,23 @@ function fetchWeather() {
         });
 }
 
+
 function displayPage(page) {
     const startIndex = (page - 1) * recordsPerPage;
     const endIndex = startIndex + recordsPerPage;
-    
+
     const pageData = currentWeatherData.slice(startIndex, endIndex);
-    
+
     const weatherInfo = pageData.map(cityData => {
         const formattedSunrise = formatTime(cityData.sunrise);
         const formattedSunset = formatTime(cityData.sunset);
-        
+
         const flagUrl = `http://openweathermap.org/images/flags/${cityData.country.toLowerCase()}.png`;
-        
+
+        const windSpeedUnit = cityData.unit === '°F' ? 'mph' : 'm/s';
+        const pressureUnit = 'hPa';
+        const humidityUnit = '%';
+
         return `
         <div class="container border p-3 mb-4">
             <div class="row">
@@ -167,15 +211,15 @@ function displayPage(page) {
             </div>
 
             <div class="row">
-                <div class="col-sm">Wind Speend: ${cityData.windSpeed}</div>
-                <div class="col-sm">Pressure: ${cityData.pressure}</div>
-                <div class="col-sm">Humidity: ${cityData.humidity}</div>
+                <div class="col-sm">Wind Speed: ${cityData.windSpeed} ${windSpeedUnit}</div>
+                <div class="col-sm">Pressure: ${cityData.pressure} ${pressureUnit}</div>
+                <div class="col-sm">Humidity: ${cityData.humidity} ${humidityUnit}</div>
                 <div class="col-sm">Sunrise: ${formattedSunrise}</div>
                 <div class="col-sm">Sunset: ${formattedSunset}</div>
             </div>
         </div>`;
-    }).join(''); 
-    
+    }).join('');
+
     let result = 
         `<div class="text-center" style="margin-bottom: 20px;">
             <h5> Here is the result: </h5>

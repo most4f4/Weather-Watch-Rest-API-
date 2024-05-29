@@ -1,31 +1,18 @@
-/*********************************************************************************
- *
- * WEB422 – Assignment 1
- * I declare that this assignment is my own work in accordance with Seneca Academic
- * Policy. No part of this assignment has been copied manually or electronically 
- * from any other source (including web sites) or distributed to other students.
- * 
- * Name: Mostafa Hasanalipourshahrabadi 
- * Student ID: 154581227 
- * Date: 2024-05-27
- * 
- ********************************************************************************/
 
-document.getElementById('weather-form').addEventListener('submit', function(event) {
-    event.preventDefault();
-    fetchWeather();
-});
+const apiKey = "48bd836253a2ae351c8ee9839626dc14";
+const recordsPerPage = 3;
+let currentPage = 1;
+let totalPages = 0;
+let currentWeatherData = [];
 
 window.onload = function() {
     getCurrentLocationWeather();
 };
 
-const apiKey = "48bd836253a2ae351c8ee9839626dc14";
-const recordsPerPage = 3;
-
-let currentPage = 1;
-let totalPages = 0;
-let currentWeatherData = [];
+document.getElementById('weather-form').addEventListener('submit', function(event) {
+    event.preventDefault();
+    fetchWeather();
+});
 
 function getCurrentLocationWeather() {
     if (navigator.geolocation) {
@@ -50,21 +37,45 @@ function fetchWeatherByCoords(lat, lon) {
         .then(data => {
             const parser = new DOMParser();
             const xmlDoc = parser.parseFromString(data, 'text/xml');
+            console.log(xmlDoc)
+            const cityElement = xmlDoc.querySelector('city');
+            // const cityElement = xmlDoc.getElementsByTagName('city')[0];
 
-            const cityElement = xmlDoc.getElementsByTagName('city')[0];
             if (!cityElement) {
                 throw new Error('City not found in XML data.');
             }
 
             const cityName = cityElement.getAttribute('name');
-            const country = xmlDoc.getElementsByTagName('country')[0].textContent;
-            const temperature = xmlDoc.getElementsByTagName('temperature')[0].getAttribute('value');
+            const country = xmlDoc.querySelector('country').textContent;
+            // const country = xmlDoc.getElementsByTagName('country')[0].textContent;
+            const temperature = parseFloat(xmlDoc.querySelector('temperature').getAttribute('value'));
+            const weatherCondition = xmlDoc.querySelector('weather').getAttribute('value');
+            const maxTemp = parseFloat(xmlDoc.querySelector('temperature').getAttribute('max'));
+            const minTemp = parseFloat(xmlDoc.querySelector('temperature').getAttribute('min'));
+            const windSpeed = parseFloat(xmlDoc.querySelector('speed').getAttribute('value'));
+            const humidity = parseFloat(xmlDoc.querySelector('humidity').getAttribute('value'));
+            const pressure = parseFloat(xmlDoc.querySelector('pressure').getAttribute('value'));
             const flagUrl = `http://openweathermap.org/images/flags/${country.toLowerCase()}.png`;
 
             const weatherInfo = `
                 <h4>Current Location Weather</h4>
-                <p><img src="${flagUrl}" alt="Flag of ${country}"> ${cityName} - ${country}</p>
-                <p>Temperature: ${parseFloat(temperature).toFixed(2)} °C</p>
+                <div class="container p-3 mb-4">
+                    <div class="row">
+                        <div class="col-2-sm">
+                            <h5><img src="${flagUrl}" alt="Flag of ${country}" class="flag"> ${cityName}, ${country}</h5>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-sm"><em><strong>${weatherCondition}</strong></em></div>
+                        <div class="col-sm"><strong>Temperature: </strong>${temperature.toFixed(2)} °C</div>
+                        <div class="col-sm">Max/Min Temp: ${maxTemp.toFixed(2)} / ${minTemp.toFixed(2)} °C</div>
+                    </div>
+                    <div class="row">
+                        <div class="col-sm">Wind Speed: ${windSpeed} m/s</div>
+                        <div class="col-sm">Pressure: ${pressure} hPa</div>
+                        <div class="col-sm">Humidity: ${humidity} %</div>
+                    </div>
+                </div>
             `;
             document.getElementById('current-location-weather').innerHTML = weatherInfo;
         })
@@ -73,6 +84,7 @@ function fetchWeatherByCoords(lat, lon) {
             document.getElementById('current-location-weather').innerHTML = '<p>Error fetching weather data for current location.</p>';
         });
 }
+
 
 function formatTime(unixTimestamp) {
     const date = new Date(unixTimestamp * 1000);
@@ -110,6 +122,7 @@ function fetchWeather() {
         .then(data => {
             const parser = new DOMParser();
             const xmlDoc = parser.parseFromString(data, 'text/xml');
+            // console.log(xmlDoc);
             const locationList = xmlDoc.querySelectorAll('item');
 
             if (locationList.length === 0) {
@@ -121,19 +134,23 @@ function fetchWeather() {
             let citiesProcessed = 0;
 
             locationList.forEach(location => {
+                
                 const cityElement = location.querySelector('city');
-                const countryElement = location.querySelector('country');
+                // const cityElement = location.getElementsByTagName('city')[0];
+                const cityId = cityElement.getAttribute('id');
                 const cityName = cityElement.getAttribute('name');
-                const country = countryElement.textContent;
+                const country = location.querySelector('country').textContent;
+                // const country = location.getElementsByTagName('country')[0].textContent;
 
-                const cityWeatherUrl = `https://api.openweathermap.org/data/2.5/weather?q=${cityName},${country}&appid=${apiKey}&units=${units}&mode=xml`;
+                const cityWeatherUrl = `https://api.openweathermap.org/data/2.5/weather?id=${cityId}&appid=${apiKey}&units=${units}&mode=xml`;
 
                 fetch(cityWeatherUrl)
                     .then(response => response.text())
                     .then(cityDataXml => {
                         const cityDataDoc = parser.parseFromString(cityDataXml, 'text/xml');
+                        // console.log(cityDataDoc);
                         const weatherElement = cityDataDoc.querySelector('current');
-
+                        // const weatherElement = cityDataDoc.getElementsByTagName('current')[0];
                         const temperature = weatherElement.querySelector('temperature').getAttribute('value');
                         const maxTemp = weatherElement.querySelector('temperature').getAttribute('max');
                         const minTemp = weatherElement.querySelector('temperature').getAttribute('min');
@@ -143,20 +160,24 @@ function fetchWeather() {
                         const pressure = weatherElement.querySelector('pressure').getAttribute('value');
                         const sunrise = weatherElement.querySelector('city sun').getAttribute('rise');
                         const sunset = weatherElement.querySelector('city sun').getAttribute('set');
+                        const latitude = weatherElement.querySelector('coord').getAttribute('lat');
+                        const longitude = weatherElement.querySelector('coord').getAttribute('lon');
 
                         currentWeatherData.push({
-                            id: cityElement.getAttribute('id'),
+                            id: cityId,
                             name: cityName,
                             country: country,
-                            temperature: parseFloat(temperature),
-                            maxTemp: parseFloat(maxTemp),
-                            minTemp: parseFloat(minTemp),
+                            temperature: temperature,
+                            maxTemp: maxTemp,
+                            minTemp: minTemp,
                             weatherCondition: weatherCondition,
-                            windSpeed: parseFloat(windSpeed),
-                            humidity: parseFloat(humidity),
-                            pressure: parseFloat(pressure),
+                            windSpeed: windSpeed,
+                            humidity: humidity,
+                            pressure: pressure,
                             sunrise: new Date(sunrise).getTime() / 1000,
                             sunset: new Date(sunset).getTime() / 1000,
+                            latitude: latitude,
+                            longitude: longitude,
                             unit: temperatureUnit
                         });
 
@@ -178,7 +199,6 @@ function fetchWeather() {
             document.getElementById('error-message').innerHTML = '<p>Error fetching weather data.</p>';
         });
 }
-
 
 function displayPage(page) {
     const startIndex = (page - 1) * recordsPerPage;
@@ -206,8 +226,8 @@ function displayPage(page) {
 
             <div class="row">
                 <div class="col-sm"><em><strong>${cityData.weatherCondition}</strong></em></div>
-                <div class="col-sm"><strong>Temperature: </strong>${cityData.temperature.toFixed(2)} ${cityData.unit}</div>
-                <div class="col-sm">Max/Min Temp: ${cityData.maxTemp.toFixed(2)} / ${cityData.minTemp.toFixed(2)} ${cityData.unit}</div>
+                <div class="col-sm"><strong>Temperature: </strong>${cityData.temperature} ${cityData.unit}</div>
+                <div class="col-sm">Max/Min Temp: ${cityData.maxTemp} / ${cityData.minTemp} ${cityData.unit}</div>
             </div>
 
             <div class="row">
@@ -216,6 +236,9 @@ function displayPage(page) {
                 <div class="col-sm">Humidity: ${cityData.humidity} ${humidityUnit}</div>
                 <div class="col-sm">Sunrise: ${formattedSunrise}</div>
                 <div class="col-sm">Sunset: ${formattedSunset}</div>
+            </div>
+            <div class="row">
+                <div class="col-sm">Coordination: [ ${cityData.longitude} , ${cityData.latitude} ]</div>
             </div>
         </div>`;
     }).join('');

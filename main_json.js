@@ -1,31 +1,18 @@
-/*********************************************************************************
- *
- * WEB422 – Assignment 1
- * I declare that this assignment is my own work in accordance with Seneca Academic
- * Policy. No part of this assignment has been copied manually or electronically 
- * from any other source (including web sites) or distributed to other students.
- * 
- * Name: Mostafa Hasanalipourshahrabadi 
- * Student ID: 154581227 
- * Date: 2024-05-27
- * 
- ********************************************************************************/
 
-document.getElementById('weather-form').addEventListener('submit', function(event) {
-    event.preventDefault();
-    fetchWeather();
-});
+const apiKey = "48bd836253a2ae351c8ee9839626dc14";
+const recordsPerPage = 3;
+let currentPage = 1;
+let totalPages = 0;
+let currentWeatherData = [];
 
 window.onload = function() {
     getCurrentLocationWeather();
 };
 
-const apiKey = "48bd836253a2ae351c8ee9839626dc14";
-const recordsPerPage = 3;
-
-let currentPage = 1;
-let totalPages = 0;
-let currentWeatherData = [];
+document.getElementById('weather-form').addEventListener('submit', function(event) {
+    event.preventDefault();
+    fetchWeather();
+});
 
 function getCurrentLocationWeather() {
     if (navigator.geolocation) {
@@ -53,12 +40,33 @@ function fetchWeatherByCoords(lat, lon) {
             const cityName = data.name;
             const country = data.sys.country;
             const temperature = data.main.temp;
+            const weatherCondition = data.weather[0].description;
+            const maxTemp = data.main.temp_max;
+            const minTemp = data.main.temp_min;
+            const windSpeed = data.wind.speed;
+            const humidity = data.main.humidity;
+            const pressure=  data.main.pressure;
             const flagUrl = `http://openweathermap.org/images/flags/${country.toLowerCase()}.png`;
             
             const weatherInfo = `
                 <h4>Current Location Weather</h4>
-                <p><img src="${flagUrl}" alt="Flag of ${country}"> ${cityName} - ${country}</p>
-                <p>Temperature: ${temperature.toFixed(2)} °C</p>
+                <div class="container p-3 mb-4">
+                    <div class="row">
+                        <div class="col-2-sm">
+                        <h5><img src="${flagUrl}" alt="Flag of ${country}" class="flag"> ${cityName}, ${country}</h5>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-sm"><em><strong>${weatherCondition}</strong></em></div>
+                    <div class="col-sm"><strong>Temperature: </strong>${temperature.toFixed(2)} °C</div>
+                    <div class="col-sm">Max/Min Temp: ${maxTemp.toFixed(2)} / ${minTemp.toFixed(2)} °C</div>
+                </div>
+
+                <div class="row">
+                    <div class="col-sm">Wind Speend: ${windSpeed} m/s</div>
+                    <div class="col-sm">Pressure: ${pressure} hPa</div>
+                    <div class="col-sm">Humidity: ${humidity} %</div>
+                </div>
             `;
             document.getElementById('current-location-weather').innerHTML = weatherInfo;
         })
@@ -114,10 +122,9 @@ function fetchWeather() {
 
             for (let i = 0; i < data.list.length; i++) {
                 const city = data.list[i];
-                const cityName = city.name;
-                const countryCode = city.sys.country;
-    
-                const cityWeatherUrl = `https://api.openweathermap.org/data/2.5/weather?q=${cityName},${countryCode}&appid=${apiKey}&units=${units}`;
+                const cityId = city.id;
+
+                const cityWeatherUrl = `https://api.openweathermap.org/data/2.5/weather?id=${cityId}&appid=${apiKey}&units=${units}`;
     
                 fetch(cityWeatherUrl)
                     .then(response => response.json())
@@ -200,8 +207,8 @@ function displayPage(page) {
                 <div class="col-sm">Sunset: ${formattedSunset}</div>
             </div>
             <div class="row">
-            <div class="col-sm">Coordination: [${cityData.lon.toFixed(2)}, ${cityData.lat.toFixed(2)}]</div>
-        </div>
+                <div class="col-sm">Coordination: [ ${cityData.lon.toFixed(2)} , ${cityData.lat.toFixed(2)} ]</div>
+            </div>
         </div>`;
     }).join(''); 
     
